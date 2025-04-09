@@ -38,7 +38,7 @@ export default function App() {
   const [decryptedResult, setDecryptedResult] = useState("");
 
   const handleProcess = async () => {
-    if (!text || !password || !sender) return;
+    if (!text || (mode === "encrypt" && (!password || !sender))) return;
     const key = deriveKeyFromPassword(password);
 
     if (mode === "encrypt") {
@@ -96,19 +96,6 @@ export default function App() {
       </h1>
 
       <div className="flex flex-col space-y-2 max-w-2xl mx-auto">
-        <input
-          className="border px-2 py-1"
-          placeholder="이름"
-          value={sender}
-          onChange={(e) => setSender(e.target.value)}
-        />
-        <input
-          type="password"
-          className="border px-2 py-1"
-          placeholder="비밀번호 (공유 키)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
         <select
           className="border px-2 py-1"
           value={mode}
@@ -117,6 +104,25 @@ export default function App() {
           <option value="encrypt">암호화</option>
           <option value="decrypt">복호화</option>
         </select>
+
+        {mode === "encrypt" && (
+          <>
+            <input
+              className="border px-2 py-1"
+              placeholder="이름"
+              value={sender}
+              onChange={(e) => setSender(e.target.value)}
+            />
+            <input
+              type="password"
+              className="border px-2 py-1"
+              placeholder="비밀번호 (공유 키)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </>
+        )}
+
         <textarea
           className="border px-2 py-1"
           placeholder={getTextPlaceholder()}
