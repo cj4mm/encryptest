@@ -1,5 +1,4 @@
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { db } from "./firebase";
 import {
   collection,
@@ -50,7 +49,7 @@ export default function App() {
 
       await addDoc(collection(db, "messages"), {
         sender,
-        password,
+        password: "***", // 비밀번호는 로그에 남기지 않음
         text: base64,
         mode,
         timestamp: Timestamp.now(),
@@ -66,7 +65,7 @@ export default function App() {
 
         await addDoc(collection(db, "messages"), {
           sender,
-          password,
+          password: "***", // 비밀번호는 로그에 남기지 않음
           text: decryptedText,
           mode,
           timestamp: Timestamp.now(),
@@ -89,6 +88,12 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  const getTextPlaceholder = () =>
+    mode === "encrypt" ? "평문 입력 (예: 안녕하세요)" : "암호문 입력 (Base64)";
+
+  const getButtonLabel = () =>
+    mode === "encrypt" ? "암호화 후 공유" : "복호화 결과 공유";
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -119,7 +124,7 @@ export default function App() {
         </select>
         <textarea
           className="border px-2 py-1"
-          placeholder="평문 입력"
+          placeholder={getTextPlaceholder()}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
@@ -127,7 +132,7 @@ export default function App() {
           className="bg-indigo-500 text-white px-4 py-2 rounded"
           onClick={handleProcess}
         >
-          암호화 후 공유
+          {getButtonLabel()}
         </button>
       </div>
 
