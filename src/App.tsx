@@ -35,6 +35,7 @@ export default function App() {
   const [text, setText] = useState("");
   const [mode, setMode] = useState<Mode>("encrypt");
   const [logs, setLogs] = useState<ChatLog[]>([]);
+  const [decryptedResult, setDecryptedResult] = useState("");
 
   const handleProcess = async () => {
     if (!text || !password || !sender) return;
@@ -49,7 +50,7 @@ export default function App() {
 
       await addDoc(collection(db, "messages"), {
         sender,
-        password: "***", // 비밀번호는 로그에 남기지 않음
+        password: "***",
         text: base64,
         mode,
         timestamp: Timestamp.now(),
@@ -62,14 +63,7 @@ export default function App() {
         const decryptedBytes = encrypted.map((b) => b ^ key);
         const decoder = new TextDecoder();
         const decryptedText = decoder.decode(new Uint8Array(decryptedBytes));
-
-        await addDoc(collection(db, "messages"), {
-          sender,
-          password: "***", // 비밀번호는 로그에 남기지 않음
-          text: decryptedText,
-          mode,
-          timestamp: Timestamp.now(),
-        });
+        setDecryptedResult(decryptedText);
         setText("");
       } catch {
         alert("⚠️ 복호화 실패: 올바른 Base64 형식이 아닙니다.");
@@ -78,7 +72,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
+    const q = query(collection(db, "messages"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newLogs: ChatLog[] = snapshot.docs.map((doc) => ({
         ...(doc.data() as ChatLog),
@@ -93,7 +87,7 @@ export default function App() {
     mode === "encrypt" ? "평문 입력 (예: 안녕하세요)" : "암호문 입력 (Base64)";
 
   const getButtonLabel = () =>
-    mode === "encrypt" ? "암호화 후 공유" : "복호화 결과 공유";
+    mode === "encrypt" ? "암호화 후 공유" : "복호화 결과 확인";
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -109,6 +103,7 @@ export default function App() {
           onChange={(e) => setSender(e.target.value)}
         />
         <input
+          type="password"
           className="border px-2 py-1"
           placeholder="비밀번호 (공유 키)"
           value={password}
@@ -134,6 +129,18 @@ export default function App() {
         >
           {getButtonLabel()}
         </button>
+
+        {mode === "decrypt" && decryptedResult && (
+          <div className="bg-white border mt-2 p-3 rounded shadow">
+            <div className="text-sm text-gray-500 mb-1">
+              복호화 결과:
+            </div>
+            <div className="flex items-center space-x-2">
+              <Unlock className="text-yellow-500 w-4 h-4" />
+              <span>{decryptedResult}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 max-w-2xl mx-auto">
