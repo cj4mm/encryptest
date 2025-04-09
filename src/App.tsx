@@ -8,7 +8,7 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { ShieldCheck, Unlock } from "lucide-react";
+import { ShieldCheck, Unlock, Lock } from "lucide-react";
 
 interface ChatLog {
   id?: string;
@@ -36,6 +36,8 @@ export default function App() {
   const [mode, setMode] = useState<Mode>("encrypt");
   const [logs, setLogs] = useState<ChatLog[]>([]);
   const [decryptedResult, setDecryptedResult] = useState("");
+  const [visibleDecryptIds, setVisibleDecryptIds] = useState<{ [id: string]: string }>({});
+  const [decryptInputs, setDecryptInputs] = useState<{ [id: string]: string }>({});
 
   const handleProcess = async () => {
     if (!text || (mode === "encrypt" && (!password || !sender))) return;
@@ -68,6 +70,20 @@ export default function App() {
       } catch {
         alert("⚠️ 복호화 실패: 올바른 Base64 형식이 아닙니다.");
       }
+    }
+  };
+
+  const handleInlineDecrypt = (log: ChatLog) => {
+    const key = deriveKeyFromPassword(decryptInputs[log.id!]);
+    try {
+      const binaryStr = atob(log.text);
+      const encrypted = [...binaryStr].map((c) => c.charCodeAt(0));
+      const decryptedBytes = encrypted.map((b) => b ^ key);
+      const decoder = new TextDecoder();
+      const decryptedText = decoder.decode(new Uint8Array(decryptedBytes));
+      setVisibleDecryptIds({ ...visibleDecryptIds, [log.id!]: decryptedText });
+    } catch {
+      alert("❌ 복호화 실패!");
     }
   };
 
@@ -138,9 +154,7 @@ export default function App() {
 
         {mode === "decrypt" && decryptedResult && (
           <div className="bg-white border mt-2 p-3 rounded shadow">
-            <div className="text-sm text-gray-500 mb-1">
-              복호화 결과:
-            </div>
+            <div className="text-sm text-gray-500 mb-1">복호화 결과:</div>
             <div className="flex items-center space-x-2">
               <Unlock className="text-yellow-500 w-4 h-4" />
               <span>{decryptedResult}</span>
@@ -165,7 +179,22 @@ export default function App() {
                 ) : (
                   <Unlock className="text-yellow-500 w-4 h-4" />
                 )}
-                <span>{log.text}</span>
+                <span>{visibleDecryptIds[log.id!] || log.text}</span>
+                {log.mode === "encrypt" && (
+                  <div className="ml-auto flex items-center space-x-1">
+                    <Lock
+                      className="w-4 h-4 cursor-pointer text-gray-400 hover:text-black"
+                      onClick={() => {
+                        const current = decryptInputs[log.id!] || "";
+                        const newInput = prompt("🔐 복호화 키 입력", current || "");
+                        if (newInput) {
+                          setDecryptInputs({ ...decryptInputs, [log.id!]: newInput });
+                          setTimeout(() => handleInlineDecrypt(log), 100);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ))}
