@@ -29,15 +29,24 @@ function deriveKeyFromPassword(password: string): number {
   return hash;
 }
 
+const LOGS_PER_PAGE = 10;
+
 export default function App() {
   const [sender, setSender] = useState("");
   const [password, setPassword] = useState("");
   const [text, setText] = useState("");
   const [mode, setMode] = useState<Mode>("encrypt");
   const [logs, setLogs] = useState<ChatLog[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [decryptedResult, setDecryptedResult] = useState("");
   const [visibleDecryptIds, setVisibleDecryptIds] = useState<{ [id: string]: string }>({});
   const [decryptInputs, setDecryptInputs] = useState<{ [id: string]: string }>({});
+
+  const totalPages = Math.ceil(logs.length / LOGS_PER_PAGE);
+  const paginatedLogs = logs.slice(
+    (currentPage - 1) * LOGS_PER_PAGE,
+    currentPage * LOGS_PER_PAGE
+  );
 
   const handleProcess = async () => {
     if (!text || (mode === "encrypt" && (!password || !sender))) return;
@@ -81,7 +90,7 @@ export default function App() {
       const decryptedBytes = encrypted.map((b) => b ^ key);
       const decoder = new TextDecoder();
       const decryptedText = decoder.decode(new Uint8Array(decryptedBytes));
-      setVisibleDecryptIds({ ...visibleDecryptIds, [log.id!]: decryptedText });
+      setVisibleDecryptIds((prev) => ({ ...prev, [log.id!]: decryptedText }));
     } catch {
       alert("❌ 복호화 실패!");
     }
@@ -168,7 +177,7 @@ export default function App() {
           <span className="mr-2">💬</span>실시간 대화 로그
         </h2>
         <div className="space-y-2">
-          {logs.map((log) => (
+          {paginatedLogs.map((log) => (
             <div key={log.id} className="bg-white p-3 rounded shadow">
               <div className="text-sm text-gray-500 mb-1">
                 [{log.timestamp.toDate().toLocaleString()}] {log.sender}:
@@ -185,12 +194,21 @@ export default function App() {
                     <Lock
                       className="w-4 h-4 cursor-pointer text-gray-400 hover:text-black"
                       onClick={() => {
-                        const current = decryptInputs[log.id!] || "";
-                        const newInput = prompt("🔐 복호화 키 입력", current || "");
-                        if (newInput) {
-                          setDecryptInputs({ ...decryptInputs, [log.id!]: newInput });
-                          setTimeout(() => handleInlineDecrypt(log), 100);
-                        }
+                        const wrapper = document.createElement("div");
+                        const input = document.createElement("input");
+                        input.type = "password";
+                        input.placeholder = "비밀번호 (공유 키)";
+                        input.style.padding = "8px";
+                        input.style.border = "1px solid #ccc";
+                        input.style.borderRadius = "4px";
+                        wrapper.appendChild(input);
+                        setTimeout(() => {
+                          const password = prompt("🔐 복호화 키 입력");
+                          if (password) {
+                            setDecryptInputs((prev) => ({ ...prev, [log.id!]: password }));
+                            handleInlineDecrypt(log);
+                          }
+                        }, 50);
                       }}
                     />
                   </div>
@@ -198,6 +216,24 @@ export default function App() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="flex justify-center mt-4 space-x-2">
+          <button
+            disabled={currentPage === 1}
+            className="px-2 py-1 bg-gray-200 rounded disabled:opacity-50"
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          >
+            ◀ 이전
+          </button>
+          <span className="text-sm py-1">{currentPage} / {totalPages || 1}</span>
+          <button
+            disabled={currentPage === totalPages || totalPages === 0}
+            className="px-2 py-1 bg-gray-200 rounded disabled:opacity-50"
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          >
+            다음 ▶
+          </button>
         </div>
       </div>
     </div>
