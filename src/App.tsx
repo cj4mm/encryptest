@@ -8,7 +8,7 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { ShieldCheck, Unlock, Lock } from "lucide-react";
+import { ShieldCheck, Unlock, Lock, Bell } from "lucide-react";
 
 interface ChatLog {
   id?: string;
@@ -17,6 +17,27 @@ interface ChatLog {
   text: string;
   mode: "encrypt" | "decrypt";
   timestamp: Timestamp;
+}
+
+function NotificationPrompt() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (Notification.permission === "default") setVisible(true);
+  }, []);
+  const requestPermission = async () => {
+    const result = await Notification.requestPermission();
+    if (result === "granted") setVisible(false);
+  };
+  if (!visible) return null;
+  return (
+    <button
+      onClick={requestPermission}
+      className="fixed bottom-4 right-4 bg-white border shadow p-2 rounded-full hover:bg-gray-100"
+      aria-label="알림 허용"
+    >
+      <Bell className="w-5 h-5 text-indigo-600" />
+    </button>
+  );
 }
 
 export default function App() {
@@ -51,12 +72,6 @@ export default function App() {
       }
     });
     return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
   }, []);
 
   const deriveKeyFromPassword = async (password: string): Promise<Uint8Array> => {
@@ -120,13 +135,7 @@ export default function App() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-4">
-      {/* <head>
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/icon-512.png" />
-        <meta name="theme-color" content="#ffffff" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-      </head> */}
+      <NotificationPrompt />
 
       <h1 className="text-xl font-bold text-center text-indigo-600">🧠 모질띨빡 암호기</h1>
 
