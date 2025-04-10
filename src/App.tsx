@@ -8,7 +8,7 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { ShieldCheck, Unlock, Lock } from "lucide-react";
+import { ShieldCheck, Unlock, Lock, LockOpen } from "lucide-react";
 
 interface ChatLog {
   id?: string;
@@ -40,6 +40,8 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [decryptedResult, setDecryptedResult] = useState("");
   const [visibleDecryptIds, setVisibleDecryptIds] = useState<{ [id: string]: string }>({});
+  const [inlinePasswords, setInlinePasswords] = useState<{ [id: string]: string }>({});
+  const [showPasswordInputs, setShowPasswordInputs] = useState<{ [id: string]: boolean }>({});
 
   const totalPages = Math.ceil(logs.length / LOGS_PER_PAGE);
   const paginatedLogs = logs.slice(
@@ -189,18 +191,48 @@ export default function App() {
                 )}
                 <span>{visibleDecryptIds[log.id!] || log.text}</span>
                 {log.mode === "encrypt" && (
-                  <div className="ml-auto flex items-center space-x-1">
-                    <Lock
-                      className="w-4 h-4 cursor-pointer text-gray-400 hover:text-black"
-                      onClick={() => {
-                        setTimeout(() => {
-                          const password = prompt("🔐 복호화 키 입력");
-                          if (password) {
-                            handleInlineDecrypt(log, password);
+                  <div className="ml-auto flex flex-col items-end space-y-1">
+                    {showPasswordInputs[log.id!] && !visibleDecryptIds[log.id!] && (
+                      <>
+                        <input
+                          type="password"
+                          className="border px-2 py-1 text-sm"
+                          placeholder="공유 키 입력"
+                          value={inlinePasswords[log.id!] || ""}
+                          onChange={(e) =>
+                            setInlinePasswords((prev) => ({
+                              ...prev,
+                              [log.id!]: e.target.value,
+                            }))
                           }
-                        }, 50);
-                      }}
-                    />
+                        />
+                        <button
+                          className="text-sm text-blue-600 hover:underline"
+                          onClick={() => {
+                            handleInlineDecrypt(log, inlinePasswords[log.id!] || "");
+                            setShowPasswordInputs((prev) => ({
+                              ...prev,
+                              [log.id!]: false,
+                            }));
+                          }}
+                        >
+                          확인
+                        </button>
+                      </>
+                    )}
+                    {!visibleDecryptIds[log.id!] ? (
+                      <Lock
+                        className="w-4 h-4 cursor-pointer text-gray-400 hover:text-black"
+                        onClick={() =>
+                          setShowPasswordInputs((prev) => ({
+                            ...prev,
+                            [log.id!]: !prev[log.id!],
+                          }))
+                        }
+                      />
+                    ) : (
+                      <LockOpen className="w-4 h-4 text-green-500" />
+                    )}
                   </div>
                 )}
               </div>
