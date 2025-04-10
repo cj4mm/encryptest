@@ -40,7 +40,6 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [decryptedResult, setDecryptedResult] = useState("");
   const [visibleDecryptIds, setVisibleDecryptIds] = useState<{ [id: string]: string }>({});
-  const [decryptInputs, setDecryptInputs] = useState<{ [id: string]: string }>({});
 
   const totalPages = Math.ceil(logs.length / LOGS_PER_PAGE);
   const paginatedLogs = logs.slice(
@@ -82,8 +81,8 @@ export default function App() {
     }
   };
 
-  const handleInlineDecrypt = (log: ChatLog) => {
-    const key = deriveKeyFromPassword(decryptInputs[log.id!]);
+  const handleInlineDecrypt = (log: ChatLog, password: string) => {
+    const key = deriveKeyFromPassword(password);
     try {
       const binaryStr = atob(log.text);
       const encrypted = [...binaryStr].map((c) => c.charCodeAt(0));
@@ -194,19 +193,10 @@ export default function App() {
                     <Lock
                       className="w-4 h-4 cursor-pointer text-gray-400 hover:text-black"
                       onClick={() => {
-                        const wrapper = document.createElement("div");
-                        const input = document.createElement("input");
-                        input.type = "password";
-                        input.placeholder = "비밀번호 (공유 키)";
-                        input.style.padding = "8px";
-                        input.style.border = "1px solid #ccc";
-                        input.style.borderRadius = "4px";
-                        wrapper.appendChild(input);
                         setTimeout(() => {
                           const password = prompt("🔐 복호화 키 입력");
                           if (password) {
-                            setDecryptInputs((prev) => ({ ...prev, [log.id!]: password }));
-                            handleInlineDecrypt(log);
+                            handleInlineDecrypt(log, password);
                           }
                         }, 50);
                       }}
