@@ -39,14 +39,13 @@ export default function App() {
       }));
       setLogs(newLogs);
 
-      // Notification logic
       if (Notification.permission === "granted" && newLogs.length > 0) {
         const latest = newLogs[0];
         const isNew = Date.now() - latest.timestamp.toMillis() < 5000;
         if (isNew) {
           new Notification("🔐 모질띨빡 암호기", {
             body: `${latest.sender}님이 새로운 암호문을 보냈습니다!`,
-            icon: "/favicon.ico",
+            icon: "/icon-192.png",
           });
         }
       }
@@ -87,6 +86,21 @@ export default function App() {
     setText("");
   };
 
+  const handleDecrypt = async () => {
+    if (!text || !password) return;
+    try {
+      const key = await deriveKeyFromPassword(password);
+      const binaryStr = atob(text);
+      const encrypted = [...binaryStr].map((c) => c.charCodeAt(0));
+      const decryptedBytes = encrypted.map((b, i) => b ^ key[i % key.length]);
+      const decoder = new TextDecoder();
+      const decryptedText = decoder.decode(new Uint8Array(decryptedBytes));
+      setResult(decryptedText);
+    } catch (err) {
+      setResult("복호화 실패: 키가 맞지 않거나 형식 오류");
+    }
+  };
+
   const handleInlineDecrypt = async (log: ChatLog, password: string) => {
     const key = await deriveKeyFromPassword(password);
     try {
@@ -106,6 +120,14 @@ export default function App() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-4">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/icon-512.png" />
+        <meta name="theme-color" content="#ffffff" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
+
       <h1 className="text-xl font-bold text-center text-indigo-600">🧠 모질띨빡 암호기</h1>
 
       <div className="space-y-2">
@@ -145,7 +167,7 @@ export default function App() {
         />
 
         <button
-          onClick={handleEncrypt}
+          onClick={mode === "encrypt" ? handleEncrypt : handleDecrypt}
           className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
         >
           {mode === "encrypt" ? "암호화 후 공유" : "복호화 결과 보기"}
