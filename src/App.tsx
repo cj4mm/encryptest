@@ -38,8 +38,26 @@ export default function App() {
         ...(doc.data() as ChatLog),
       }));
       setLogs(newLogs);
+
+      // Notification logic
+      if (Notification.permission === "granted" && newLogs.length > 0) {
+        const latest = newLogs[0];
+        const isNew = Date.now() - latest.timestamp.toMillis() < 5000;
+        if (isNew) {
+          new Notification("🔐 모질띨빡 암호기", {
+            body: `${latest.sender}님이 새로운 암호문을 보냈습니다!`,
+            icon: "/favicon.ico",
+          });
+        }
+      }
     });
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
   }, []);
 
   const deriveKeyFromPassword = async (password: string): Promise<Uint8Array> => {
