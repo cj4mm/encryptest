@@ -8,7 +8,7 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { ShieldCheck, Unlock, Lock, LockOpen } from "lucide-react";
+import { ShieldCheck, Unlock, Lock } from "lucide-react";
 
 interface ChatLog {
   id?: string;
@@ -220,9 +220,11 @@ export default function App() {
                         </button>
                       </>
                     )}
-                    {!visibleDecryptIds[log.id!] ? (
+                    {visibleDecryptIds[log.id!] ? (
+                      <Unlock className="w-4 h-4 text-green-500" />
+                    ) : (
                       <Lock
-                        className="w-4 h-4 cursor-pointer text-gray-400 hover:text-black"
+                        className="w-4 h-4 text-gray-400 hover:text-black cursor-pointer"
                         onClick={() =>
                           setShowPasswordInputs((prev) => ({
                             ...prev,
@@ -230,8 +232,6 @@ export default function App() {
                           }))
                         }
                       />
-                    ) : (
-                      <LockOpen className="w-4 h-4 text-green-500" />
                     )}
                   </div>
                 )}
