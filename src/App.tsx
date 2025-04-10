@@ -21,12 +21,15 @@ interface ChatLog {
 
 type Mode = "encrypt" | "decrypt";
 
-function deriveKeyFromPassword(password: string): number {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    hash = (hash * 31 + password.charCodeAt(i)) % 256;
-  }
-  return hash;
+async function deriveKeyBytes(password: string): Promise<Uint8Array> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return new Uint8Array(hashBuffer);
+}
+
+function xorEncryptDecrypt(data: Uint8Array, key: Uint8Array): Uint8Array {
+  return data.map((byte, index) => byte ^ key[index % key.length]);
 }
 
 const LOGS_PER_PAGE = 10;
@@ -51,12 +54,12 @@ export default function App() {
 
   const handleProcess = async () => {
     if (!text || (mode === "encrypt" && (!password || !sender))) return;
-    const key = deriveKeyFromPassword(password);
+    const keyBytes = await deriveKeyBytes(password);
 
     if (mode === "encrypt") {
       const encoder = new TextEncoder();
       const bytes = encoder.encode(text);
-      const encrypted = bytes.map((b) => b ^ key);
+      const encrypted = xorEncryptDecrypt(bytes, keyBytes);
       const encryptedStr = String.fromCharCode(...encrypted);
       const base64 = btoa(encryptedStr);
 
@@ -71,10 +74,10 @@ export default function App() {
     } else {
       try {
         const binaryStr = atob(text);
-        const encrypted = [...binaryStr].map((c) => c.charCodeAt(0));
-        const decryptedBytes = encrypted.map((b) => b ^ key);
+        const encrypted = new Uint8Array([...binaryStr].map((c) => c.charCodeAt(0)));
+        const decryptedBytes = xorEncryptDecrypt(encrypted, keyBytes);
         const decoder = new TextDecoder();
-        const decryptedText = decoder.decode(new Uint8Array(decryptedBytes));
+        const decryptedText = decoder.decode(decryptedBytes);
         setDecryptedResult(decryptedText);
         setText("");
       } catch {
@@ -83,14 +86,14 @@ export default function App() {
     }
   };
 
-  const handleInlineDecrypt = (log: ChatLog, password: string) => {
-    const key = deriveKeyFromPassword(password);
+  const handleInlineDecrypt = async (log: ChatLog, password: string) => {
     try {
+      const keyBytes = await deriveKeyBytes(password);
       const binaryStr = atob(log.text);
-      const encrypted = [...binaryStr].map((c) => c.charCodeAt(0));
-      const decryptedBytes = encrypted.map((b) => b ^ key);
+      const encrypted = new Uint8Array([...binaryStr].map((c) => c.charCodeAt(0)));
+      const decryptedBytes = xorEncryptDecrypt(encrypted, keyBytes);
       const decoder = new TextDecoder();
-      const decryptedText = decoder.decode(new Uint8Array(decryptedBytes));
+      const decryptedText = decoder.decode(decryptedBytes);
       setVisibleDecryptIds((prev) => ({ ...prev, [log.id!]: decryptedText }));
     } catch {
       alert("❌ 복호화 실패!");
